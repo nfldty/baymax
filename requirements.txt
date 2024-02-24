@@ -1,0 +1,9 @@
+sys
+time
+keyboard
+audio2face_pb2
+audio2face_pb2_grpc
+grpc
+numpy 
+soundfile
+google
