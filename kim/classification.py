@@ -40,6 +40,7 @@ def exit(text):
     examples=examples,
     )
     prediction = response.classifications[0]
+    print(response)
     #print(prediction.confidence)
     if prediction.prediction == "Yes" and prediction.confidence > 0.99:
         return True

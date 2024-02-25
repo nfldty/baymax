@@ -24,6 +24,7 @@ from scipy.io import wavfile
 from pydub import AudioSegment
 import wave
 from nsbehacks2t4_name_extraction import cohereNameExtractor
+from kim import chatbot, classification
 
 
 recognizer = sr.Recognizer()
@@ -40,7 +41,7 @@ def get_tts_data(text: str) -> bytes:
     # Create a BytesIO object to hold the TTS audio data in mp3 format
     tts_result = io.BytesIO()
     # Generate TTS audio using gTTS library with the specified text and language (en-US)
-    tts = gTTS(text=text, lang='en-US', slow=True)
+    tts = gTTS(text=text, lang='en-US',  slow=False)
     # Write the TTS audio data to the BytesIO object
     tts.write_to_fp(tts_result)
     tts_result.seek(0)
@@ -192,7 +193,7 @@ def send_to_audio_face(text):
     audio_fpath = "result.wav"
 
     # Prim path of the Audio2Face Streaming Audio Player on the stage (were to push the audio data)
-    instance_name = "/World/audio2face/PlayerStreaming_03"
+    instance_name = "/World/audio2face/PlayerStreaming"
 
     data, samplerate = soundfile.read(audio_fpath, dtype="float64")
     # Only Mono audio is supported
@@ -217,14 +218,18 @@ def main():
     gRPC protocol details could be find in audio2face.proto
     """
     send_to_audio_face("Hi, Welcome to Baymax. Before we begin our session, can you please tell me your name?")
-    text = "Hi, My name is Kimberly"
+    text = listen()
     name = cohereNameExtractor.extract(text)
     print(name)
-    send_to_audio_face("Hi " + name + ",Let's begin our session.")
+    send_to_audio_face("Okay " + name + ",Let's begin our session.")
     while(True):
         keyboard.wait('esc')
         text = listen()
-        send_to_audio_face(text)
+        if classification.exit(text):
+            send_to_audio_face("Thanks for using our service, Goodbye!")
+            break
+        response = chatbot.chat(text)
+        send_to_audio_face(response)
         
         
         
