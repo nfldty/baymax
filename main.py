@@ -23,8 +23,10 @@ import io
 from scipy.io import wavfile
 from pydub import AudioSegment
 import wave
+from nsbehacks2t4_name_extraction import cohereNameExtractor
 
 
+recognizer = sr.Recognizer()
 def get_tts_data(text: str) -> bytes:
     """
     Generate Text-to-Speech (TTS) audio in mp3 format.
@@ -159,6 +161,49 @@ def push_audio_track_stream(url, audio_data, samplerate, instance_name):
     print("Channel closed")
 
 def ask_name():
+    textcohereNameExtractor
+
+def listen():
+    with sr.Microphone() as source:
+        print("Listening...")
+        audio = recognizer.listen(source)
+    text = ""
+    try:
+        print("Recognizing...")
+        text = recognizer.recognize_google(audio)
+        print("You said:", text)
+    except sr.UnknownValueError:
+        text = "Sorry, I couldn't understand what you said."
+    except sr.RequestError as e:
+        text = "Sorry, I couldn't understand what you said."
+    return text
+
+def send_to_audio_face(text):
+    
+    get_tts_data(text)
+    # save_wav_from_bytes(get_tts_data(text), "result.wav")
+    # Sleep time emulates long latency of the request
+    sleep_time = 0  # ADJUST
+
+    # URL of the Audio2Face Streaming Audio Player server (where A2F App is running)
+    url = "localhost:50051"  # ADJUST
+
+    # Local input WAV file path
+    audio_fpath = "result.wav"
+
+    # Prim path of the Audio2Face Streaming Audio Player on the stage (were to push the audio data)
+    instance_name = "/World/audio2face/PlayerStreaming_03"
+
+    data, samplerate = soundfile.read(audio_fpath, dtype="float64")
+    # Only Mono audio is supported
+    if len(data.shape) > 1:
+        data = np.average(data, axis=1)
+
+    print(f"Sleeping for {sleep_time} seconds")
+    time.sleep(sleep_time)
+
+    push_audio_track_stream(url, data, samplerate, instance_name)
+    
     
 def main():
     """
@@ -171,50 +216,18 @@ def main():
      * streaming audio via internet, streaming Text-To-Speech, etc
     gRPC protocol details could be find in audio2face.proto
     """
-    keyboard.
+    send_to_audio_face("Hi, Welcome to Baymax. Before we begin our session, can you please tell me your name?")
+    text = "Hi, My name is Kimberly"
+    name = cohereNameExtractor.extract(text)
+    print(name)
+    send_to_audio_face("Hi " + name + ",Let's begin our session.")
     while(True):
         keyboard.wait('esc')
-        recognizer = sr.Recognizer()
-        with sr.Microphone() as source:
-            print("Listening...")
-            audio = recognizer.listen(source)
-        text = ""
-        try:
-            print("Recognizing...")
-            text = recognizer.recognize_google(audio)
-            print("You said:", text)
-        except sr.UnknownValueError:
-            text = "Sorry, I couldn't understand what you said."
-        except sr.RequestError as e:
-            text = "Sorry, I couldn't understand what you said."
+        text = listen()
+        send_to_audio_face(text)
         
         
-        get_tts_data(text)
-        # save_wav_from_bytes(get_tts_data(text), "result.wav")
-        # Sleep time emulates long latency of the request
-        sleep_time = 0  # ADJUST
-
-        # URL of the Audio2Face Streaming Audio Player server (where A2F App is running)
-        url = "localhost:50051"  # ADJUST
-
-        # Local input WAV file path
-        audio_fpath = "result.wav"
-
-        # Prim path of the Audio2Face Streaming Audio Player on the stage (were to push the audio data)
-        instance_name = "/World/audio2face/PlayerStreaming_02"
-
-        data, samplerate = soundfile.read(audio_fpath, dtype="float64")
-        print(len(data))
-        print(data)
-        print(samplerate)
-        # Only Mono audio is supported
-        if len(data.shape) > 1:
-            data = np.average(data, axis=1)
-
-        print(f"Sleeping for {sleep_time} seconds")
-        time.sleep(sleep_time)
-   
-        push_audio_track_stream(url, data, samplerate, instance_name)
+        
         # else:
         #     continue
         # push_audio_track_stream(url, data, samplerate, instance_name)

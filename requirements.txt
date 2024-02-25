@@ -8,3 +8,4 @@ numpy
 soundfile
 google
 pydub
+cohere
