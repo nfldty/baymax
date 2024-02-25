@@ -17,6 +17,71 @@ import audio2face_pb2_grpc
 import grpc
 import numpy as np
 import soundfile
+import speech_recognition as sr
+from gtts import gTTS
+import io
+from scipy.io import wavfile
+from pydub import AudioSegment
+import wave
+
+
+def get_tts_data(text: str) -> bytes:
+    """
+    Generate Text-to-Speech (TTS) audio in mp3 format.
+    
+    Parameters:
+        text (str): The text to be converted to speech.
+        
+    Returns:
+        bytes: TTS audio in mp3 format.
+    """
+    # Create a BytesIO object to hold the TTS audio data in mp3 format
+    tts_result = io.BytesIO()
+    # Generate TTS audio using gTTS library with the specified text and language (en-US)
+    tts = gTTS(text=text, lang='en-US', slow=True)
+    # Write the TTS audio data to the BytesIO object
+    tts.write_to_fp(tts_result)
+    tts_result.seek(0)
+    with open("result.wav", 'wb') as f:
+        f.write(tts_result.getvalue())
+    # Read and return the TTS audio data as bytes
+    return tts_result.read()
+
+def tts_to_wav(tts_byte: bytes, framerate: int = 44100) -> np.ndarray:
+    """
+    Convert TTS audio from mp3 format to WAV format and set the desired frame rate and channels.
+    
+    Parameters:
+        tts_byte (bytes): TTS audio in mp3 format.
+        framerate (int, optional): Desired frame rate for the WAV audio. Defaults to 22050.
+        
+    Returns:
+        numpy.ndarray: TTS audio in WAV format as a numpy array of float32 values.
+    """
+   # Convert the TTS audio bytes in mp3 format to a pydub AudioSegment object
+    seg = AudioSegment.from_mp3(io.BytesIO(tts_byte))
+    # Set the frame rate and number of channels for the audio
+    seg = seg.set_frame_rate(framerate)
+    seg = seg.set_channels(1)
+    # Create a BytesIO object to hold the WAV audio data
+    wavIO = io.BytesIO()
+    # Export the AudioSegment as WAV audio to the BytesIO object
+    seg.export(wavIO, format="wav")
+    wavIO.seek(0)
+    # Read the WAV audio data from the BytesIO object using scipy.io.wavfile.read()
+    rate, wav = read(wavIO)
+    return wav
+
+
+def save_wav_from_bytes(audio_bytes, filename, framerate=44100):
+    with wave.open(filename, 'wb') as wav_file:
+        # Set the WAV file parameters
+        wav_file.setnchannels(1)  # Mono
+        wav_file.setsampwidth(2)  # 2 bytes (16 bits) per sample
+        wav_file.setframerate(framerate)  # Sample rate
+
+        # Write the audio data to the WAV file
+        wav_file.writeframes(audio_bytes)
 
 
 def push_audio_track(url, audio_data, samplerate, instance_name):
@@ -66,7 +131,7 @@ def push_audio_track_stream(url, audio_data, samplerate, instance_name):
     block_until_playback_is_finished = True  # ADJUST
 
     with grpc.insecure_channel(url) as channel:
-        print("Channel creadted")
+        print("Channel created")
         stub = audio2face_pb2_grpc.Audio2FaceStub(channel)
 
         def make_generator():
@@ -84,17 +149,17 @@ def push_audio_track_stream(url, audio_data, samplerate, instance_name):
                 yield audio2face_pb2.PushAudioStreamRequest(audio_data=chunk.astype(np.float32).tobytes())
 
        
-        for i in range(5):
-            request_generator = make_generator()
-            print("Sending audio data...")
-            response = stub.PushAudioStream(request_generator)
-            if response.success:
-                print("SUCCESS")
-            else:
-                print(f"ERROR: {response.message}")
+        request_generator = make_generator()
+        print("Sending audio data...")
+        response = stub.PushAudioStream(request_generator)
+        if response.success:
+            print("SUCCESS")
+        else:
+            print(f"ERROR: {response.message}")
     print("Channel closed")
 
-
+def ask_name():
+    
 def main():
     """
     This demo script shows how to send audio data to Audio2Face Streaming Audio Player via gRPC requests.
@@ -106,8 +171,26 @@ def main():
      * streaming audio via internet, streaming Text-To-Speech, etc
     gRPC protocol details could be find in audio2face.proto
     """
+    keyboard.
     while(True):
-       keyb
+        keyboard.wait('esc')
+        recognizer = sr.Recognizer()
+        with sr.Microphone() as source:
+            print("Listening...")
+            audio = recognizer.listen(source)
+        text = ""
+        try:
+            print("Recognizing...")
+            text = recognizer.recognize_google(audio)
+            print("You said:", text)
+        except sr.UnknownValueError:
+            text = "Sorry, I couldn't understand what you said."
+        except sr.RequestError as e:
+            text = "Sorry, I couldn't understand what you said."
+        
+        
+        get_tts_data(text)
+        # save_wav_from_bytes(get_tts_data(text), "result.wav")
         # Sleep time emulates long latency of the request
         sleep_time = 0  # ADJUST
 
@@ -115,13 +198,15 @@ def main():
         url = "localhost:50051"  # ADJUST
 
         # Local input WAV file path
-        audio_fpath = sys.argv[1]
+        audio_fpath = "result.wav"
 
         # Prim path of the Audio2Face Streaming Audio Player on the stage (were to push the audio data)
-        instance_name = sys.argv[2]
+        instance_name = "/World/audio2face/PlayerStreaming_02"
 
-        data, samplerate = soundfile.read(audio_fpath, dtype="float32")
-
+        data, samplerate = soundfile.read(audio_fpath, dtype="float64")
+        print(len(data))
+        print(data)
+        print(samplerate)
         # Only Mono audio is supported
         if len(data.shape) > 1:
             data = np.average(data, axis=1)
@@ -129,7 +214,7 @@ def main():
         print(f"Sleeping for {sleep_time} seconds")
         time.sleep(sleep_time)
    
-        push_audio_track(url, data, samplerate, instance_name)
+        push_audio_track_stream(url, data, samplerate, instance_name)
         # else:
         #     continue
         # push_audio_track_stream(url, data, samplerate, instance_name)
