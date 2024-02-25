@@ -9,3 +9,4 @@ soundfile
 google
 pydub
 cohere
+google.cloud.texttospeech

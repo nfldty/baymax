@@ -25,7 +25,9 @@ from pydub import AudioSegment
 import wave
 from nsbehacks2t4_name_extraction import cohereNameExtractor
 from kim import chatbot, classification
-
+import os
+credential_path = r"C:\Users\Tyo\Downloads\baymax-415407-2484b86ca837.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credential_path
 
 recognizer = sr.Recognizer()
 def get_tts_data(text: str) -> bytes:
@@ -75,6 +77,29 @@ def tts_to_wav(tts_byte: bytes, framerate: int = 44100) -> np.ndarray:
     rate, wav = read(wavIO)
     return wav
 
+import google.cloud.texttospeech as tts
+
+
+def text_to_wav(voice_name: str, text: str):
+    language_code = "-".join(voice_name.split("-")[:2])
+    text_input = tts.SynthesisInput(text=text)
+    voice_params = tts.VoiceSelectionParams(
+        language_code=language_code, name=voice_name
+    )
+    audio_config = tts.AudioConfig(audio_encoding=tts.AudioEncoding.LINEAR16)
+
+    client = tts.TextToSpeechClient()
+    response = client.synthesize_speech(
+        input=text_input,
+        voice=voice_params,
+        audio_config=audio_config,
+    )
+
+    filename = f"result.wav"
+    with open(filename, "wb") as out:
+        out.write(response.audio_content)
+        print(f'Generated speech saved to "{filename}"')
+        
 
 def save_wav_from_bytes(audio_bytes, filename, framerate=44100):
     with wave.open(filename, 'wb') as wav_file:
@@ -181,7 +206,8 @@ def listen():
 
 def send_to_audio_face(text):
     
-    get_tts_data(text)
+    # get_tts_data(text)
+    text_to_wav("en-US-Journey-F", text)
     # save_wav_from_bytes(get_tts_data(text), "result.wav")
     # Sleep time emulates long latency of the request
     sleep_time = 0  # ADJUST
@@ -218,13 +244,14 @@ def main():
     gRPC protocol details could be find in audio2face.proto
     """
     send_to_audio_face("Hi, Welcome to Baymax. Before we begin our session, can you please tell me your name?")
-    text = listen()
+    # text = listen()
     name = cohereNameExtractor.extract(text)
     print(name)
     send_to_audio_face("Okay " + name + ",Let's begin our session.")
     while(True):
-        keyboard.wait('esc')
-        text = listen()
+        text = input("prompt:")
+        # keyboard.wait('esc')
+        # text = listen()
         if classification.exit(text):
             send_to_audio_face("Thanks for using our service, Goodbye!")
             break
