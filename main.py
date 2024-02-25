@@ -243,11 +243,12 @@ def main():
      * streaming audio via internet, streaming Text-To-Speech, etc
     gRPC protocol details could be find in audio2face.proto
     """
-    send_to_audio_face("Hi, Welcome to Baymax. Before we begin our session, can you please tell me your name?")
-    # text = listen()
-    name = cohereNameExtractor.extract(text)
-    print(name)
-    send_to_audio_face("Okay " + name + ",Let's begin our session.")
+    # send_to_audio_face("Hi, Welcome to Baymax. Before we begin our session, can you please tell me your name?")
+    # # text = listen()
+    # text = input("name:")
+    # name = cohereNameExtractor.extract(text)
+    # print(name)
+    # send_to_audio_face("Okay " + name + ",Let's begin our session.")
     while(True):
         text = input("prompt:")
         # keyboard.wait('esc')
@@ -255,7 +256,8 @@ def main():
         if classification.exit(text):
             send_to_audio_face("Thanks for using our service, Goodbye!")
             break
-        response = chatbot.chat(text)
+        response = chatbot.chat(text, name="Tyo")
+        print(response)
         send_to_audio_face(response)
         
         

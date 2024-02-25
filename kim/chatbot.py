@@ -16,9 +16,11 @@ for i in range(100):
     docs.append(line)
     line = f.readline()
     
-def chat(text):
+def chat(text, name):
     results = co.rerank(query=text, documents=docs, top_n=1, model='rerank-english-v2.0')
     response = co.chat(
+        preamble_override=f"You are a virtual doctor assistant called Baymax, the user's name is {name}, don't say hello, welcome, or take care",
         model='6c1924a9-b363-4890-9e5e-6e72b24dfc5f-ft',
-        message="The user has the same issues as this conversation:" + results[0].document["text"] + "Please answer the user's questions according to given conversation. This is the user's questions: {text}")
+        message="The user asks : {text}. use the following data to answer the question.:" + results[0].document["text"] + "Please answer the user's questions according to given conversation.",
+        return_chat_history=True)
     return response.text
